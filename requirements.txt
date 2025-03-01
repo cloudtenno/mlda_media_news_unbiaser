@@ -1,0 +1,9 @@
+Flask
+validators
+requests
+beautifulsoup4
+selenium
+chardet
+deep-translator
+googlesearch-python
+ollama

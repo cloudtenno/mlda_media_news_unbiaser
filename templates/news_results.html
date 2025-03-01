@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>News Results</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .controls {
+      text-align: right;
+    }
+    .unbiased-btn {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 15px 25px;
+      font-size: 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    .unbiased-btn:disabled {
+      background-color: #a5d6a7;
+      cursor: not-allowed;
+    }
+    .big-spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+      margin-left: 10px;
+    }
+    .flags-container {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      display: inline-block;
+    }
+    .flags-container img {
+      width: 40px;
+      height: 30px;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    .flags-container img.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .small-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+      margin-left: 10px;
+    }
+    .spinner-text {
+      display: inline-block;
+      margin-left: 5px;
+      vertical-align: middle;
+      font-size: 14px;
+      color: #333;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .site-list {
+      list-style: none;
+      padding: 0;
+    }
+    .site-item {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .site-item:last-child {
+      border-bottom: none;
+    }
+    .site-item a {
+      text-decoration: none;
+      color: #3498db;
+    }
+    .status {
+      margin-bottom: 20px;
+      font-size: 16px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">News Search Results</div>
+      <div class="controls">
+        <!-- Unbiased News Generation Form -->
+        <form id="unbiasedForm" method="post" action="/generate_unbiased" style="display:inline;">
+          <button type="submit" class="unbiased-btn" id="unbiasedBtn">Generate Unbiased News</button>
+        </form>
+        <!-- Flags Control Box -->
+        <div class="flags-container" id="flagsContainer">
+          <img src="https://flagcdn.com/40x30/cn.png" alt="Chinese" data-language="chinese" class="flag-btn">
+          <img src="https://flagcdn.com/40x30/jp.png" alt="Japanese" data-language="japanese" class="flag-btn">
+          <img src="https://flagcdn.com/40x30/in.png" alt="Indian" data-language="indian" class="flag-btn">
+        </div>
+      </div>
+    </div>
+    <!-- Status area that is updated by scraping_status polling -->
+    <div class="status" id="status"></div>
+    <ul class="site-list" id="siteList">
+      <!-- List items will be injected here -->
+    </ul>
+  </div>
+  
+  <script>
+    // Poll for news URLs every 2 seconds.
+    function fetchNews() {
+      fetch('/get_news')
+        .then(response => response.json())
+        .then(data => {
+          const siteList = document.getElementById('siteList');
+          siteList.innerHTML = '';
+          data.forEach(item => {
+            let li = document.createElement('li');
+            li.className = 'site-item';
+            li.innerHTML = `<strong>${item.Domain}</strong>: <a href="${item.URL}" target="_blank">${item.URL}</a>`;
+            siteList.appendChild(li);
+          });
+        })
+        .catch(error => {
+          console.error('Error fetching news:', error);
+        });
+    }
+    setInterval(fetchNews, 2000);
+    fetchNews();
+    
+    // Poll the scraping status from the server.
+    function updateScrapingStatus() {
+      fetch('/scraping_status')
+        .then(response => response.json())
+        .then(data => {
+          const statusEl = document.getElementById('status');
+          if (data.complete) {
+            statusEl.textContent = "Scraping Complete";
+          } else {
+            // Show a small spinner with text "Scraping" if not finished.
+            statusEl.innerHTML = '';
+            let spinner = document.createElement('div');
+            spinner.className = 'small-spinner';
+            let span = document.createElement('span');
+            span.className = 'spinner-text';
+            span.textContent = 'Scraping';
+            statusEl.appendChild(spinner);
+            statusEl.appendChild(span);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching scraping status:', error);
+        });
+    }
+    setInterval(updateScrapingStatus, 2000);
+    updateScrapingStatus();
+    
+    // Handle flag button clicks for translation.
+    document.querySelectorAll('.flag-btn').forEach(function(img) {
+      img.addEventListener('click', function() {
+        let language = img.getAttribute('data-language');
+        let unbiasedBtn = document.getElementById('unbiasedBtn');
+        // Disable the unbiased button and the clicked flag.
+        unbiasedBtn.disabled = true;
+        img.classList.add('disabled');
+        
+        // Update status text based on language.
+        let statusText = "";
+        if (language === "chinese") {
+          statusText = "Scraping News from Chinese Media";
+        } else if (language === "japanese") {
+          statusText = "Scraping News from Japanese Media";
+        } else if (language === "indian") {
+          statusText = "Scraping News from Hindi Media";
+        }
+        document.getElementById('status').textContent = statusText;
+        
+        // Create and show a small spinner with text next to the flag.
+        let spinner = document.createElement('div');
+        spinner.className = 'small-spinner';
+        let spinnerText = document.createElement('span');
+        spinnerText.className = 'spinner-text';
+        spinnerText.textContent = 'Finding Article and Translating';
+        let spinnerContainer = document.createElement('div');
+        spinnerContainer.appendChild(spinner);
+        spinnerContainer.appendChild(spinnerText);
+        img.parentNode.insertBefore(spinnerContainer, img.nextSibling);
+        
+        // Send AJAX request for translation.
+        fetch('/translate_news/' + language, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          // Remove the spinner container.
+          spinnerContainer.remove();
+          // Re-enable the unbiased button.
+          unbiasedBtn.disabled = false;
+          // Reset status text via polling.
+          updateScrapingStatus();
+          if(data.error){
+            alert('Error: ' + data.error);
+          }
+        })
+        .catch(error => {
+          spinnerContainer.remove();
+          unbiasedBtn.disabled = false;
+          updateScrapingStatus();
+          alert('Error: ' + error);
+        });
+      });
+    });
+    
+    // Handle the Unbiased News form submission.
+    document.getElementById('unbiasedForm').addEventListener('submit', function(e) {
+      let btn = document.getElementById('unbiasedBtn');
+      btn.disabled = true;
+      // Create a big spinner element next to the button.
+      let bigSpinner = document.createElement('div');
+      bigSpinner.className = 'big-spinner';
+      let spinnerText = document.createElement('span');
+      spinnerText.className = 'spinner-text';
+      spinnerText.textContent = 'Generating Unbias Report';
+      let spinnerContainer = document.createElement('div');
+      spinnerContainer.appendChild(bigSpinner);
+      spinnerContainer.appendChild(spinnerText);
+      btn.parentNode.appendChild(spinnerContainer);
+      // The form will submit normally.
+    });
+  </script>
+</body>
+</html>

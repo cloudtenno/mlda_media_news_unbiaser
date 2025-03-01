@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Summary and Search Term</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    .box {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 20px;
+      overflow: auto;
+      word-wrap: break-word;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    /* Search Term Textarea styling */
+    #searchTermInput {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      overflow: hidden;
+      resize: none;
+    }
+    .action-buttons {
+      margin-top: 10px;
+    }
+    .action-buttons button {
+      padding: 10px 15px;
+      font-size: 16px;
+      margin-right: 5px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .confirm-btn {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .modify-btn {
+      background-color: #2196F3;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Summary Box -->
+    <div class="box">
+      <div class="title">Extracted Summary</div>
+      <div id="summaryText">{{ summary|safe }}</div>
+    </div>
+    <!-- Search Term Box -->
+    <div class="box">
+      <div class="title">Search Term</div>
+      <textarea id="searchTermInput" readonly oninput="autoResize(this)">{{ search_term }}</textarea>
+      <div class="action-buttons">
+        <button class="confirm-btn" id="confirmBtn">Confirm</button>
+        <button class="modify-btn" id="modifyBtn">Modify</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Auto-resize the textarea based on its content.
+    function autoResize(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }
+    window.onload = function() {
+      autoResize(document.getElementById('searchTermInput'));
+    };
+    // Allow editing when "Modify" is clicked.
+    document.getElementById('modifyBtn').addEventListener('click', function() {
+      var textarea = document.getElementById('searchTermInput');
+      textarea.removeAttribute('readonly');
+      textarea.focus();
+    });
+    // When "Confirm" is clicked, trigger the news scraper and redirect.
+    document.getElementById('confirmBtn').addEventListener('click', function() {
+      var textarea = document.getElementById('searchTermInput');
+      textarea.setAttribute('readonly', 'readonly');
+      var searchTerm = textarea.value;
+      document.getElementById('confirmBtn').disabled = true;
+      fetch('/run_scraper', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: 'search_term=' + encodeURIComponent(searchTerm)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if(data.status === 'started'){
+          window.location.href = '/news_results';
+        } else {
+          alert('Error starting scraper: ' + data.error);
+          document.getElementById('confirmBtn').disabled = false;
+        }
+      })
+      .catch(error => {
+        alert('Error: ' + error);
+        document.getElementById('confirmBtn').disabled = false;
+      });
+    });
+  </script>
+</body>
+</html>
