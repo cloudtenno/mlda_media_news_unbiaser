@@ -28,8 +28,8 @@ This repository contains a Flask web application that performs the following tas
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/news-scraper-summarizer.git
-cd news-scraper-summarizer
+git clone https://github.com/cloudtenno/mlda_media_news_unbiaser.git
+cd mlda_media_news_unbiaser
 ```
 
 ### 2. Set Up a Virtual Environment
